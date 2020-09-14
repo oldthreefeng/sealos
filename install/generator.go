@@ -18,6 +18,38 @@ networking:
   # dnsDomain: cluster.local
   podSubnet: {{.PodCIDR}}
   serviceSubnet: {{.SvcCIDR}}
+etcd:
+  local:
+    servercertSANs:
+    - {{.ApiServer}}
+    {{range .Masters -}}
+    - {{.}}
+    {{end -}}
+    {{range .CertSANS -}}
+    - {{.}}
+    {{end -}}
+    - {{.VIP}}
+    peerCertSANs:
+    - {{.ApiServer}}
+    {{range .Masters -}}
+    - {{.}}
+    {{end -}}
+    {{range .CertSANS -}}
+    - {{.}}
+    {{end -}}
+    - {{.VIP}}
+    extraArgs: # 暂时没有extraVolumes
+      auto-compaction-retention: "1h"
+      max-request-bytes: "33554432"
+      quota-backend-bytes: "8589934592"
+      enable-v2: "false"
+      initial-cluster: dev-k8s-master=https://192.168.253.129:2380
+      initial-cluster-state: new
+      name: dev-k8s-master
+      listen-peer-urls: https://192.168.253.129:2380
+      listen-client-urls: https://127.0.0.1:2379,https://192.168.253.129:2379
+      advertise-client-urls: https://192.168.253.129:2379
+      initial-advertise-peer-urls: https://192.168.253.129:2380
 apiServer:
   certSANs:
   - 127.0.0.1
