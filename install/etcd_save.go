@@ -84,8 +84,10 @@ func (e *EtcdFlags) Save(inDocker bool) {
 	}
 	cfg, err := GetCfg(e.Endpoints)
 	if err != nil {
-		logger.Error("get etcd cfg error: ", err)
-		os.Exit(-1)
+		if cfg, err = GetEctdCfgByKubeFile(e.Endpoints); err != nil {
+			logger.Error("get etcd cfg error: ", err)
+			os.Exit(-1)
+		}
 	}
 	lg, err := zap.NewProduction()
 	if err != nil {
@@ -108,7 +110,7 @@ func (e *EtcdFlags) Save(inDocker bool) {
 		SendPackage(e.LongName, e.EtcdHosts, e.BackDir, nil, nil)
 	}
 	// trimPathForOss is  trim this  `/sealos//snapshot-1598146449` to   `sealos/snapshot-1598146449`
-	e.ObjectPath = trimPathForOss(e.ObjectPath+"/"+e.Name)
+	e.ObjectPath = trimPathForOss(e.ObjectPath + "/" + e.Name)
 	if e.AccessKeyId != "" {
 		err := saveToOss(e.OssEndpoint, e.AccessKeyId, e.AccessKeySecrets, e.BucketName, e.ObjectPath, e.LongName)
 		if err != nil {
@@ -116,11 +118,10 @@ func (e *EtcdFlags) Save(inDocker bool) {
 			return
 		}
 		// 如果没有报错， 保存一下最新命令行配置。
-		logger.Info("Finished saving/uploading snapshot [%s] on aliyun oss [%s] bucket",e.Name, e.BucketName)
+		logger.Info("Finished saving/uploading snapshot [%s] on aliyun oss [%s] bucket", e.Name, e.BucketName)
 		e.Dump("")
 	}
 }
-
 
 func trimPathForOss(path string) string {
 	s, _ := filepath.Abs(path)
@@ -157,6 +158,7 @@ func saveToOss(aliEndpoint, accessKeyId, accessKeySecrets, bucketName, objectNam
 
 }
 
+// GetCfg is get etcd cfg by using ~/.sealos/pki/{ca crt key}
 func GetCfg(ep []string) (*clientv3.Config, error) {
 	var cfgtls *transport.TLSInfo
 	tlsinfo := transport.TLSInfo{}
@@ -178,6 +180,7 @@ func GetCfg(ep []string) (*clientv3.Config, error) {
 	return cfg, nil
 }
 
+// GetEctdClient is get ectd client
 func GetEctdClient(ep []string) (*clientv3.Client, error) {
 	var cfgtls *transport.TLSInfo
 	tlsinfo := transport.TLSInfo{}
@@ -199,6 +202,28 @@ func GetEctdClient(ep []string) (*clientv3.Client, error) {
 	return cli, nil
 }
 
+// GetEctdCfgByKubeFile is get etcd cfg by using /etc/kubernetes/pki/{ca crt key}.
+func GetEctdCfgByKubeFile(ep []string) (*clientv3.Config, error) {
+	var cfgtls *transport.TLSInfo
+	tlsinfo := transport.TLSInfo{}
+	tlsinfo.CertFile = KUBEREtcdCert
+	tlsinfo.KeyFile = KUBEREtcdKey
+	tlsinfo.TrustedCAFile = KUBEREtcdCacart
+	tlsinfo.InsecureSkipVerify = true
+	tlsinfo.Logger, _ = zap.NewProduction()
+	cfgtls = &tlsinfo
+	clientTLS, err := cfgtls.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	cfg := &clientv3.Config{
+		Endpoints:   ep,
+		DialTimeout: 5 * time.Second,
+		TLS:         clientTLS,
+	}
+	return cfg, nil
+}
+
 type epHealth struct {
 	Ep     string `json:"endpoint"`
 	Health bool   `json:"health"`
@@ -206,6 +231,7 @@ type epHealth struct {
 	Error  string `json:"error"`
 }
 
+// GetHealthFlag is get flags
 func GetHealthFlag() *EtcdFlags {
 	e := &EtcdFlags{}
 	if !e.CertFileExist() {
@@ -227,12 +253,16 @@ func GetHealthFlag() *EtcdFlags {
 	return e
 }
 
+//HealthCheck is check your etcd health or not
 func (e *EtcdFlags) HealthCheck() {
 	cfgs := []*clientv3.Config{}
 	for _, ep := range e.Endpoints {
 		cfg, err := GetCfg([]string{ep})
 		if err != nil {
-			logger.Error(err)
+			if cfg, err = GetEctdCfgByKubeFile([]string{ep}); err != nil {
+				logger.Error(err)
+				continue
+			}
 		}
 		cfgs = append(cfgs, cfg)
 	}
@@ -284,5 +314,6 @@ func (e *EtcdFlags) HealthCheck() {
 
 // CertFileExist if cert file is exist return true
 func (e *EtcdFlags) CertFileExist() bool {
-	return FileExist(EtcdCacart) && FileExist(EtcdCert) && FileExist(EtcdKey)
+	return (FileExist(EtcdCacart) && FileExist(EtcdCert) && FileExist(EtcdKey)) ||
+		(FileExist(KUBEREtcdCacart) && FileExist(KUBEREtcdKey) && FileExist(KUBEREtcdCert))
 }

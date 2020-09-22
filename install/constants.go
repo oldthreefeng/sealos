@@ -26,4 +26,8 @@ const (
 	// kube file
 	KUBECONTROLLERCONFIGFILE = "/etc/kubernetes/controller-manager.conf"
 	KUBESCHEDULERCONFIGFILE  = "/etc/kubernetes/scheduler.conf"
+
+	KUBEREtcdCacart              = "/etc/kubernetes/pki/etcd/ca.crt"
+	KUBEREtcdCert                = "/etc/kubernetes/pki/etcd/healthcheck-client.crt"
+	KUBEREtcdKey                 = "/etc/kubernetes/pki/etcd/healthcheck-client.key"
 )
