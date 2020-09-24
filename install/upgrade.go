@@ -16,6 +16,7 @@ type SealosUpgrade struct {
 	NewPkgUrl    string
 	IPtoHostName map[string]string
 	Client       *kubernetes.Clientset
+	ImageList    []string
 }
 
 var (
@@ -49,7 +50,8 @@ func ExitUpgradeCase(version, pkgUrl, cfgFile string) error {
 		return fmt.Errorf("KubeDefaultConfigPath %s is not exist, Exit", k8s.KubeDefaultConfigPath)
 	}
 
-	if err := upgradeSealos.Load(cfgFile); err != nil {
+
+	if err := upgradeSealos.Load(""); err != nil {
 		upgradeSealos.ShowDefaultConfig()
 		return err
 	}
