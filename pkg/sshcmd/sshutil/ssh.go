@@ -9,7 +9,7 @@ import (
 
 //Cmd is in host exec cmd
 func (ss *SSH) Cmd(host string, cmd string) []byte {
-	//logger.Info("[ssh][%s] %s", host, cmd)
+	logger.Info("[ssh][%s] %s", host, cmd)
 	session, err := ss.Connect(host)
 	defer func() {
 		if r := recover(); r != nil {
