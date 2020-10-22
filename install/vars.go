@@ -22,6 +22,8 @@ var (
 	CertPath     = "/root/.sealos/pki"
 	CertEtcdPath = "/root/.sealos/pki/etcd"
 
+	HostnameOverWrite bool
+
 	VIP     string
 	PkgUrl  string
 	Version string
