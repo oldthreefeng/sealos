@@ -25,6 +25,9 @@ func BuildInit() {
 		Masters: masters,
 		Nodes:   nodes,
 	}
+	if HostnameOverWrite {
+		i.SetHostname()
+	}
 	i.CheckValid()
 	i.Print()
 	i.SendSealos()
